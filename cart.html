@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="styles/theme.css">
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
+    <script src="https://twitter.github.io/typeahead.js/releases/latest/typeahead.bundle.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col p-3">
+                <h2><center><b>Summary of all Orders: </b></center></h2>
+            </div>
+        </div>
+        <div class="row">
+            <div class="form-group col text-center">
+                <label for="customer-email" class="col-form-label">Your Email:</label>
+                <select id="customer-email" class="selectpicker show-tick" data-live-search="true" data-size="10"></select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-9 mt-5 mb-4">
+                <div id="summaryCards"></div>
+            </div>
+            <div class="col-3">
+                <div class="card bg-light text-dark">
+                    <div class="card-body" id="cartsummary"></div>
+                  </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-5 p-3">
+                <a class="btn btn-dark float-left" id="backHome" href = "">Back Home</a>
+            </div>
+            <div class="col-2 p-3">
+                <a class="btn btn-secondary float-left" id="backToOrders" href = "">Back to Orders</a>
+            </div>
+            <div class="col-5 p-3">
+                <a class="btn btn-primary float-right disabled" id="orderToDB" onclick="addOrderToDb()">Finish Order</a>
+            </div>
+        </div>
+    </div>
+    <script> 
+        items = null;
+        customerEmail = null;
+
+        function refreshCardsDiv(){
+            cardsHtml = '';
+            for (var i = 0; i < recipientCards.length; i++) {
+                var aCard = recipientCards[i];
+                cardsHtml += '<div class="col-4 mb-2">';
+                cardsHtml += '<div class="card h-100">';
+                cardsHtml += '<div class="card-header"><b>' + aCard.recipientName + '</b></div>';
+                cardsHtml += '<div class="card-body"><p class="mb-2">' + aCard.message + '</p>';
+                for (let [key, value] of Object.entries(aCard.values)) {
+                    cardsHtml += '<p class="mb-0">' + getItemNameFromId(key) + ' x' + value + '</p>';
+                }
+                cardsHtml += '</div>';
+                cardsHtml += '</div></div>';
+            }
+            $('#summaryCards').html(cardsHtml);            
+        }
+        function getItemNameFromId(id) {
+            for (item of items) {
+                if (item[0] == id) {
+                    return item[1];
+                }
+            }
+            return '';
+        }
+        $(document).ready(function () {
+            items = JSON.parse(localStorage.getItem('itemsForCategory'));
+            recipientCards = JSON.parse(localStorage.getItem('cart'));
+            userEmails = JSON.parse(localStorage.getItem('userEmails'));
+            for (item of recipientCards){
+                emailindex = userEmails.indexOf(item.recipientEmail);
+                if (emailindex > -1) {
+                    userEmails.splice(emailindex, 1);
+                }
+            }
+            cusemail = localStorage.getItem('customerEmail');
+
+            $('#customer-email').append('<option value="">Select</option>');
+
+            for (email of userEmails) {                
+                $('#customer-email').append('<option value="' + email + '"' + (cusemail === email ? 'selected':'') + '>' + email + '</option>');
+            }
+            $('#customer-email').selectpicker('refresh');
+
+            $('#customer-email').on('change', function(event){
+                localStorage.setItem('customerEmail', $('#customer-email').val());       
+                
+                if ($('#customer-email').val() !== '') {
+                    $('#orderToDB').removeClass('disabled');
+                }
+                else {
+                    $('#orderToDB').addClass('disabled');
+                }
+            });
+            if (($('#customer-email option:selected').length > 0) && ($('#customer-email').val() !== '')) {
+                $('#orderToDB').removeClass('disabled');
+            }
+            refreshCardsDiv();
+            refreshCartSummary(); 
+        });
+
+        function refreshCartSummary() {
+            cartSummary = '';
+            totals = new Array();
+            for (card of recipientCards) {
+                carditems = card.values;
+                i =0;
+                for (key in carditems) {
+                    val = carditems[key];
+                    if (!totals[i])
+                    {
+                        totals[i] = 0;
+                    }
+                    totals[i] += parseInt(carditems[key]);
+                    i++;
+                }
+
+            }
+
+            cartSummary += ('<div class="row">');
+                cartSummary += ('<div class="col">');
+                    cartSummary += ('<h6>Cart Summary:</h6>');
+                    cartSummary += ('</div>');
+                    cartSummary += ('</div>');
+            for (let i=0; i<items.length; i++) {
+            item = items[i];    
+            cartSummary += ('<div class="row">');
+                cartSummary += ('<div class="col">');
+                    cartSummary += ('<p>' + item[1] + '- ' + totals[i] + '</p>');
+                    cartSummary += ('</div>');
+                    cartSummary += ('</div>');
+            }
+            totalMoney = 0;
+            totalQuantity = 0;
+            for (let i=0; i<totals.length; i++) {
+                totalQuantity += totals[i];
+            }
+            totalMoney = totalQuantity * 2;
+            cartSummary += ('<div class="row">');
+                cartSummary += ('<div class="col">');
+                    cartSummary += ('<h6>Grand Total: $'+ totalMoney + '</h6>');
+                    cartSummary += ('</div>');
+                    cartSummary += ('</div>');
+
+                    $('#cartsummary').html(cartSummary);
+        }
+
+        function addOrderToDb() {
+
+            $.ajax({
+                url: "http://127.0.0.1:5001/create_order",
+                context: this,
+                method: "put",
+                data: {'customer_email': localStorage.getItem('customerEmail'), 'recipient_cards': localStorage.getItem('cart')},
+                dataType: "json"
+            }).done(function (data, status) {
+                localStorage.clear();
+                $('#orderToDB').html('<p><b>Order Placed</b></p>');
+                $('#orderToDB').addClass('disabled');
+                $('#backToCustomer').addClass('disabled');
+                $('#backToOrders').addClass('disabled');
+            });
+            
+        }
+        
+        $('#backToOrders').attr('href', 'items.html?category=' + localStorage.getItem('category'));
+        $('#backHome').attr('href', 'index.html?category=' + localStorage.getItem('category'));
+        $('#backToCustomer').attr('href', 'customer.html?category=' + localStorage.getItem('category'));
+
+        
+
+    </script>
+</body>
+</html>

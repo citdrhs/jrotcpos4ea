@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="styles/theme.css">
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
+    <script src="https://twitter.github.io/typeahead.js/releases/latest/typeahead.bundle.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-4">
+                <h2>All orders</h2>
+            </div>
+            <div class="col-8">
+                <h2>Filter:</h2>
+                <div class="row">
+                    <div class="col-4">
+                        <input type="text" id="blocktwo" placeholder="Enter Block 4 Number: "/>
+                    </div>
+                    <div class="col-4">
+                        <button type="button" class="btn btn-block btn-primary mb-3 ml-2" onclick="filterordersByBlockTwo()" >Filter</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="button" class="btn btn-block btn-primary"  onclick="clearFilter()" >Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card-body bg-light mb-5 mt-1">
+                    <div id="summaryDiv">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" id="display_orders">
+        </div>
+    </div>
+</body>
+<script>
+    $(document).ready(function () {                    
+        getAllOrders();
+    });
+
+    function getAllOrders() {
+        orders = {};
+        ordersinfoobj = new Object();
+        $.ajax({
+            url: "http://127.0.0.1:5001/get_order_info",
+            context: this,
+            method: "post",
+            dataType: "json",
+            data: { 'confirmed' : true}
+        }).done(function (data, status) {
+
+            summaryObject = new Object();
+            items = data;
+            for (item of items) {
+                ordersobj = ordersinfoobj[item[0]];
+                if (ordersobj == undefined){
+                    ordersobj = new Object();
+                    ordersobj.orderid = item[0];
+                    ordersobj.customeremail = item[1];
+
+                    ordersinfoobj[item[0]] = ordersobj;
+                }                    
+                    orderrecipients = ordersobj.recipients;
+                    if (orderrecipients == undefined){
+                        orderrecipients = new Array();
+                        ordersobj.recipients = orderrecipients;
+                    }
+
+                    recipientfound = false;
+                    orderrecipient = undefined;
+                    for (index in orderrecipients) {
+                        arecipient = orderrecipients[index];
+                        if (arecipient.id === item[16]) {
+                            recipientfound= true;
+                            orderrecipient = arecipient;
+                            break;
+                        }
+                    }
+
+                    if (!recipientfound){
+                        orderrecipient = new Object();
+                        // set all recipient stuff here
+                        orderrecipient.id = item[16];
+                        orderrecipient.gift_msg = item[2];
+                        orderrecipient.fn = item[3];
+                        orderrecipient.ln = item[4];
+                        orderrecipient.email = item[5];
+                        orderrecipient.b1 = item[6];
+                        orderrecipient.b2 = item[7];
+                        orderrecipient.b3 = item[8];
+                        orderrecipient.b4 = item[9];
+                        orderrecipient.b5 = item[10];
+                        orderrecipient.b6 = item[11];
+                        orderrecipient.b7 = item[12];
+                        orderrecipient.adv = item[13];
+                        orderrecipient.orderitems  = new Array();
+
+                        orderrecipients.push(orderrecipient);
+                    } 
+                    
+                    // look at the order items within the recipient
+                    orderitemsforrecipient = orderrecipient.orderitems;
+
+                    if (orderitemsforrecipient == undefined){
+                        orderitemsforrecipient = new Array();
+                        orderrecipient.orderitems = orderitemsforrecipient;
+                    }
+
+                    orderitemfound = false;
+                    anOrderItem = undefined;
+
+                    for (index in orderitemsforrecipient){
+                        orderitem = orderitemsforrecipient[index];
+                        if (orderitem.id === item[17]) {
+                            orderitemfound = true;
+                            anOrderItem = orderitem;
+                            break;
+                        }
+                    }
+
+                    if (!orderitemfound) {
+                        anOrderItem = new Object ();
+                        anOrderItem.id = item[17];
+                        anOrderItem.product_name = item[14];
+                        anOrderItem.quantity = item[15];
+                        orderitemsforrecipient.push(anOrderItem);
+
+
+                        productObject = summaryObject[item[18]];
+                        if (productObject == undefined) {
+                            productObject = new Object();
+                            productObject.product_id = item[18];
+                            productObject.product_desc = item[14]
+                            productObject.total = 0;
+                            summaryObject[item[18]] = productObject;
+
+                        }
+                        productObject.total += item[15];       
+                    }
+
+                }
+
+            localStorage.setItem("ordersinfoobj", JSON.stringify(ordersinfoobj));
+            localStorage.setItem("summaryObject", JSON.stringify(summaryObject));
+            
+            $('#display_orders').html('');
+            for (let [key, value] of Object.entries(ordersinfoobj)) {
+                $('#display_orders').append(generateCard(value));
+            }
+
+
+            $('#summaryDiv').html(generateSummary());
+
+
+        });
+    }
+
+    function clearFilter() {
+        ordersinfoobj = JSON.parse(localStorage.getItem("ordersinfoobj"));
+        $('#display_orders').html('');
+        for (let [key, value] of Object.entries(ordersinfoobj)) {
+            $('#display_orders').append(generateCard(value));
+        }
+    }
+
+
+    function filterordersByBlockTwo() {
+        ordersinfoobj = JSON.parse(localStorage.getItem("ordersinfoobj"));
+        filteredorderinfoobj = new Object();
+        for (let [key,value] of Object.entries(ordersinfoobj)){
+            recipients = value.recipients;
+            for (index in recipients) {
+                arecipient = recipients[index];
+                if (arecipient.b4 === $('#blocktwo').val()) {
+                    filteredorderinfoobj[value.orderid] = value;
+                    break;
+                }
+            }
+        }
+
+        $('#display_orders').html('');
+        for (let [key, value] of Object.entries(filteredorderinfoobj)) {
+            $('#display_orders').append(generateCard(value));
+        }
+
+
+    }
+
+
+
+    function generateCard(order) {
+        totalQuantity = 0;
+        cardsHtml = '<div class="col-4 mb-2">';
+        cardsHtml += '<div class="card">';
+        cardsHtml += '<div class="card-header"><b>Customer email: </b>' + order.customeremail +'</div>';
+        for (index in order.recipients) {
+            orderrecipient = order.recipients[index];
+            cardsHtml += '<div class="card-body"><b>Recipient Name and Email: </b>' + orderrecipient.fn + ' ' + orderrecipient.ln + ', ' + orderrecipient.email + '<br><b>Recipient Schedule: </b>' + orderrecipient.b1 + ', ' + orderrecipient.b2 + ', ' + orderrecipient.b3 + ', ' + orderrecipient.b4 + ', ' + orderrecipient.b5 + ', ' + orderrecipient.b6 + ', ' + orderrecipient.b7 + ', ' + orderrecipient.adv + '<br><b>Recipient Message: </b>' + orderrecipient.gift_msg + '</div>';
+            
+            orderitems = orderrecipient.orderitems;
+            for (itemindex in orderitems){
+                orderitem = orderitems[itemindex];
+                cardsHtml += '<div class="row ml-3">' + orderitem.product_name + ' x' + orderitem.quantity + '</div>'; 
+                totalQuantity+=orderitem.quantity;
+            }
+        }
+        cardsHtml += '<div class="row ml-3"><b>' + 'Total: $'+ totalQuantity*2 + '</b></div>';
+        cardsHtml += '</div>';
+        cardsHtml += '</div></div>';
+
+        return cardsHtml;
+
+        
+    }
+
+
+    function generateSummary() {
+        total = 0;
+        summaryHtml = '';
+        summaryObject = JSON.parse(localStorage.getItem("summaryObject"));
+        for (let [key,value] of Object.entries(summaryObject)){
+            total += value.total;
+            summaryHtml += '<div class="row"><div class="col"><b>'+ value.product_desc + '</b> - ' + value.total + '</div></div>';
+        }
+        summaryHtml += '<div class="row"><div class="col"><b> Total Carnations - </b>' + total + '</div></div>';
+        summaryHtml += '<div class="row"><div class="col"><b> Grand Total - </b>' + '$' + total*2 + '</div></div>';
+        return summaryHtml;
+    }
+</script>
+</body>
+</html>

@@ -29,7 +29,7 @@ app.after_request(add_cors_headers)
 
 @app.route('/', methods=["POST", "GET"])
 def index():
-    return render_template("index.html")
+    return "It works!"
 
 @app.route('/get_items', methods=["POST", "GET"])
 def get_items():
@@ -126,5 +126,5 @@ def confirm_order():
     return response
     
 if __name__ == '__main__':
-    app.run(port=5001)
+    app.run(host="0.0.0.0",port=5001)
     

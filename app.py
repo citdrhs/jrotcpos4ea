@@ -3,13 +3,14 @@ from flask import render_template
 from flask import request
 from flask import jsonify
 import json
+import os
 import psycopg2
 from flask_cors import CORS
 
 #Flask application instance
 
 conn = psycopg2.connect(
-   database="pointofsale", user='postgres', password='pointofsale', host='127.0.0.1', port='5432'
+   database="pointofsale", user='postgres', password='pointofsale', host=os.environ['DBIP'], port='5432'
 )
 conn.autocommit = True
 cursor = conn.cursor()
